@@ -1,0 +1,9 @@
+package: github.com/tsingson/phi
+import:
+- package: github.com/casbin/casbin
+- package: github.com/dgrijalva/jwt-go
+- package: github.com/valyala/fasthttp
+testImport:
+- package: github.com/gavv/httpexpect
+- package: github.com/go-chi/chi
+- package: github.com/go-chi/jwtauth
