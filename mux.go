@@ -2,7 +2,6 @@ package phi
 
 import (
 	"fmt"
-
 	"strings"
 	"sync"
 
@@ -431,6 +430,32 @@ func (mx *Mux) updateSubRoutes(fn func(subMux *Mux)) {
 		}
 		fn(subMux)
 	}
+}
+
+func (mx *Mux) ServeFiles(path string, rootPath string) {
+	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
+		panic("path must end with /*filepath in path '" + path + "'")
+	}
+	prefix := path[:len(path)-10]
+
+	stripSlashes := strings.Count(prefix, "/")
+
+	fs := &fasthttp.FS{
+		Root:               rootPath,
+		IndexNames:         []string{"index.html"},
+		GenerateIndexPages: false,
+		AcceptByteRange:    true,
+		Compress:           true,
+	}
+	if stripSlashes > 0 {
+		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
+	}
+
+	fileHandler := fs.NewRequestHandler() // fasthttp.FSHandler(rootPath, strings.Count(prefix, "/"))
+
+	mx.Get(path, func(ctx *fasthttp.RequestCtx) {
+		fileHandler(ctx)
+	})
 }
 
 func notFound(ctx *fasthttp.RequestCtx) {
