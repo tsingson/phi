@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/valyala/fasthttp"
 )
@@ -446,6 +447,7 @@ func (mx *Mux) ServeFiles(path string, rootPath string) {
 		GenerateIndexPages: false,
 		AcceptByteRange:    true,
 		Compress:           true,
+		CacheDuration: 90*time.Second,
 	}
 	if stripSlashes > 0 {
 		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
