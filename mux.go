@@ -453,11 +453,12 @@ func (mx *Mux) ServeFiles(path string, rootPath string) {
 		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
 	}
 
-	fileHandler := fs.NewRequestHandler() // fasthttp.FSHandler(rootPath, strings.Count(prefix, "/"))
+	fh := fs.NewRequestHandler() // fasthttp.FSHandler(rootPath, strings.Count(prefix, "/"))
 
 	mx.Get(path, func(ctx *fasthttp.RequestCtx) {
-		fileHandler(ctx)
+		fh(ctx)
 	})
+	return
 }
 
 func notFound(ctx *fasthttp.RequestCtx) {
