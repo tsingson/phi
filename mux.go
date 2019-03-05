@@ -13,7 +13,7 @@ var _ Router = &Mux{}
 
 // Mux is a simple HTTP route multiplexer that parses a request path,
 // records any URL params, and executes an end handler. It implements
-// the phi.Handler interface and is friendly with the standard library.
+// the phi.HandlerFunc interface and is friendly with the standard library.
 //
 // Mux is designed to be fast, minimal and offer a powerful API for building
 // modular and composable HTTP services with a large set of handlers. It's
@@ -33,16 +33,16 @@ type Mux struct {
 
 	// The computed mux handler made of the chained middleware stack and
 	// the tree router
-	handler Handler
+	handler HandlerFunc
 
 	// Routing context pool
 	pool sync.Pool
 
 	// Custom route not found handler
-	notFoundHandler HandlerFunc
+	notFoundHandler RequestHandlerFunc
 
 	// Custom method not allowed handler
-	methodNotAllowedHandler HandlerFunc
+	methodNotAllowedHandler RequestHandlerFunc
 }
 
 // NewMux returns a newly initialized Mux object that implements the Router
@@ -55,10 +55,10 @@ func NewMux() *Mux {
 	return mux
 }
 
-// ServeFastHTTP is the single method of the phi.Handler interface that makes
+// Handler is the single method of the phi.HandlerFunc interface that makes
 // Mux interoperable with the standard library. It uses a sync.Pool to get and
 // reuse routing contexts for each request.
-func (mx *Mux) ServeFastHTTP(ctx *fasthttp.RequestCtx) {
+func (mx *Mux) Handler(ctx *fasthttp.RequestCtx) {
 	// Ensure the mux has some routes defined on the mux
 	if mx.handler == nil {
 		panic("phi: attempting to route to a mux with no handlers.")
@@ -67,7 +67,7 @@ func (mx *Mux) ServeFastHTTP(ctx *fasthttp.RequestCtx) {
 	// Check if a routing context already exists from a parent router.
 	rctx, _ := ctx.UserValue(RouteCtxKey).(*Context)
 	if rctx != nil {
-		mx.handler.ServeFastHTTP(ctx)
+		mx.handler.Handler(ctx)
 		return
 	}
 
@@ -79,7 +79,7 @@ func (mx *Mux) ServeFastHTTP(ctx *fasthttp.RequestCtx) {
 	rctx.Reset()
 	rctx.Routes = mx
 	ctx.SetUserValue(RouteCtxKey, rctx)
-	mx.handler.ServeFastHTTP(ctx)
+	mx.handler.Handler(ctx)
 	mx.pool.Put(rctx)
 }
 
@@ -88,7 +88,7 @@ func (mx *Mux) ServeFastHTTP(ctx *fasthttp.RequestCtx) {
 // The middleware stack for any Mux will execute before searching for a matching
 // route to a specific handler, which provides opportunity to respond early,
 // change the course of the request execution, or set request-scoped values for
-// the next phi.Handler.
+// the next phi.HandlerFunc.
 func (mx *Mux) Use(middlewares ...Middleware) {
 	if mx.handler != nil {
 		panic("phi: all middlewares must be defined before routes on a mux")
@@ -97,14 +97,14 @@ func (mx *Mux) Use(middlewares ...Middleware) {
 }
 
 // Handle adds the route `pattern` that matches any http method to
-// execute the `handler` phi.Handler.
-func (mx *Mux) Handle(pattern string, handler HandlerFunc) {
+// execute the `handler` phi.HandlerFunc.
+func (mx *Mux) Handle(pattern string, handler RequestHandlerFunc) {
 	mx.handle(mALL, pattern, handler)
 }
 
 // Method adds the route `pattern` that matches `method` http method to
-// execute the `handler` phi.Handler.
-func (mx *Mux) Method(method, pattern string, handler HandlerFunc) {
+// execute the `handler` phi.HandlerFunc.
+func (mx *Mux) Method(method, pattern string, handler RequestHandlerFunc) {
 	m, ok := methodMap[strings.ToUpper(method)]
 	if !ok {
 		panic(fmt.Sprintf("phi: '%s' http method is not supported.", method))
@@ -113,68 +113,68 @@ func (mx *Mux) Method(method, pattern string, handler HandlerFunc) {
 }
 
 // Connect adds the route `pattern` that matches a CONNECT http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Connect(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Connect(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mCONNECT, pattern, handlerFn)
 }
 
 // Delete adds the route `pattern` that matches a DELETE http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Delete(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Delete(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mDELETE, pattern, handlerFn)
 }
 
 // Get adds the route `pattern` that matches a GET http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Get(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Get(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mGET, pattern, handlerFn)
 }
 
 // Head adds the route `pattern` that matches a HEAD http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Head(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Head(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mHEAD, pattern, handlerFn)
 }
 
 // Options adds the route `pattern` that matches a OPTIONS http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Options(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Options(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mOPTIONS, pattern, handlerFn)
 }
 
 // Patch adds the route `pattern` that matches a PATCH http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Patch(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Patch(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mPATCH, pattern, handlerFn)
 }
 
 // Post adds the route `pattern` that matches a POST http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Post(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Post(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mPOST, pattern, handlerFn)
 }
 
 // Put adds the route `pattern` that matches a PUT http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Put(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Put(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mPUT, pattern, handlerFn)
 }
 
 // Trace adds the route `pattern` that matches a TRACE http method to
-// execute the `handlerFn` phi.HandlerFunc.
-func (mx *Mux) Trace(pattern string, handlerFn HandlerFunc) {
+// execute the `handlerFn` phi.RequestHandlerFunc.
+func (mx *Mux) Trace(pattern string, handlerFn RequestHandlerFunc) {
 	mx.handle(mTRACE, pattern, handlerFn)
 }
 
-// NotFound sets a custom phi.HandlerFunc for routing paths that could
+// NotFound sets a custom phi.RequestHandlerFunc for routing paths that could
 // not be found. The default 404 handler is `ctx.NotFound()`.
-func (mx *Mux) NotFound(handlerFn HandlerFunc) {
+func (mx *Mux) NotFound(handlerFn RequestHandlerFunc) {
 	// Build NotFound handler chain
 	m := mx
 	hFn := handlerFn
 	if mx.inline && mx.parent != nil {
 		m = mx.parent
-		hFn = Chain(mx.middlewares...).HandlerFunc(hFn).ServeFastHTTP
+		hFn = Chain(mx.middlewares...).HandlerFunc(hFn).Handler
 	}
 
 	// Update the notFoundHandler from this point forward
@@ -186,15 +186,15 @@ func (mx *Mux) NotFound(handlerFn HandlerFunc) {
 	})
 }
 
-// MethodNotAllowed sets a custom phi.HandlerFunc for routing paths where the
+// MethodNotAllowed sets a custom phi.RequestHandlerFunc for routing paths where the
 // method is unresolved. The default handler returns a 405 with an empty body.
-func (mx *Mux) MethodNotAllowed(handlerFn HandlerFunc) {
+func (mx *Mux) MethodNotAllowed(handlerFn RequestHandlerFunc) {
 	// Build MethodNotAllowed handler chain
 	m := mx
 	hFn := handlerFn
 	if mx.inline && mx.parent != nil {
 		m = mx.parent
-		hFn = Chain(mx.middlewares...).HandlerFunc(hFn).ServeFastHTTP
+		hFn = Chain(mx.middlewares...).HandlerFunc(hFn).Handler
 	}
 
 	// Update the methodNotAllowedHandler from this point forward
@@ -243,14 +243,14 @@ func (mx *Mux) Route(pattern string, fn func(r Router)) {
 	mx.Mount(pattern, subRouter)
 }
 
-// Mount attaches another phi.Handler or phi Router as a subrouter along a routing
+// Mount attaches another phi.HandlerFunc or phi Router as a subrouter along a routing
 // path. It's very useful to split up a large API as many independent routers and
 // compose them as a single service using Mount. See _examples/.
 //
 // Note that Mount() simply sets a wildcard along the `pattern` that will continue
 // routing at the `handler`, which in most cases is another phi.Router. As a result,
 // if you define two Mount() routes on the exact same pattern the mount will panic.
-func (mx *Mux) Mount(pattern string, handler Handler) { // nolint: gocyclo
+func (mx *Mux) Mount(pattern string, handler HandlerFunc) { // nolint: gocyclo
 	// Provide runtime safety for ensuring a pattern isn't mounted on an existing
 	// routing pattern.
 	if mx.tree.findPattern(pattern+"*") || mx.tree.findPattern(pattern+"/*") {
@@ -267,15 +267,15 @@ func (mx *Mux) Mount(pattern string, handler Handler) { // nolint: gocyclo
 	}
 
 	// Wrap the sub-router in a handlerFunc to scope the request path for routing.
-	mountHandler := HandlerFunc(func(ctx *fasthttp.RequestCtx) {
+	mountHandler := RequestHandlerFunc(func(ctx *fasthttp.RequestCtx) {
 		rctx := RouteContext(ctx)
 		rctx.RoutePath = mx.nextRoutePath(rctx)
-		handler.ServeFastHTTP(ctx)
+		handler.Handler(ctx)
 	})
 
 	if pattern == "" || pattern[len(pattern)-1] != '/' {
-		notFoundHandler := HandlerFunc(func(ctx *fasthttp.RequestCtx) {
-			mx.NotFoundHandler().ServeFastHTTP(ctx)
+		notFoundHandler := RequestHandlerFunc(func(ctx *fasthttp.RequestCtx) {
+			mx.NotFoundHandler().Handler(ctx)
 		})
 
 		mx.handle(mALL|mSTUB, pattern, mountHandler)
@@ -330,7 +330,7 @@ func (mx *Mux) Match(rctx *Context, method, path string) bool {
 
 // NotFoundHandler returns the default Mux 404 responder whenever a route
 // cannot be found.
-func (mx *Mux) NotFoundHandler() HandlerFunc {
+func (mx *Mux) NotFoundHandler() RequestHandlerFunc {
 	if mx.notFoundHandler != nil {
 		return mx.notFoundHandler
 	}
@@ -339,7 +339,7 @@ func (mx *Mux) NotFoundHandler() HandlerFunc {
 
 // MethodNotAllowedHandler returns the default Mux 405 responder whenever
 // a method cannot be resolved for a route.
-func (mx *Mux) MethodNotAllowedHandler() HandlerFunc {
+func (mx *Mux) MethodNotAllowedHandler() RequestHandlerFunc {
 	if mx.methodNotAllowedHandler != nil {
 		return mx.methodNotAllowedHandler
 	}
@@ -351,12 +351,12 @@ func (mx *Mux) MethodNotAllowedHandler() HandlerFunc {
 // point, no other middlewares can be registered on this Mux's stack. But you can still
 // compose additional middlewares via Group()'s or using a chained middleware handler.
 func (mx *Mux) buildRouteHandler() {
-	mx.handler = chain(mx.middlewares, HandlerFunc(mx.routeHTTP))
+	mx.handler = chain(mx.middlewares, RequestHandlerFunc(mx.routeHTTP))
 }
 
-// handle registers a phi.Handler in the routing tree for a particular http method
+// handle registers a phi.HandlerFunc in the routing tree for a particular http method
 // and routing pattern.
-func (mx *Mux) handle(method methodTyp, pattern string, handler Handler) *node {
+func (mx *Mux) handle(method methodTyp, pattern string, handler HandlerFunc) *node {
 	if len(pattern) == 0 || pattern[0] != '/' {
 		panic(fmt.Sprintf("phi: routing pattern must begin with '/' in '%s'", pattern))
 	}
@@ -367,9 +367,9 @@ func (mx *Mux) handle(method methodTyp, pattern string, handler Handler) *node {
 	}
 
 	// Build endpoint handler with inline middlewares for the route
-	var h Handler
+	var h HandlerFunc
 	if mx.inline {
-		mx.handler = HandlerFunc(mx.routeHTTP)
+		mx.handler = RequestHandlerFunc(mx.routeHTTP)
 		h = Chain(mx.middlewares...).Handler(handler)
 	} else {
 		h = handler
@@ -397,19 +397,19 @@ func (mx *Mux) routeHTTP(ctx *fasthttp.RequestCtx) {
 	}
 	method, ok := methodMap[rctx.RouteMethod]
 	if !ok {
-		mx.MethodNotAllowedHandler().ServeFastHTTP(ctx)
+		mx.MethodNotAllowedHandler().Handler(ctx)
 		return
 	}
 
 	// Find the route
 	if _, _, h := mx.tree.FindRoute(rctx, method, routePath); h != nil {
-		h.ServeFastHTTP(ctx)
+		h.Handler(ctx)
 		return
 	}
 	if rctx.methodNotAllowed {
-		mx.MethodNotAllowedHandler().ServeFastHTTP(ctx)
+		mx.MethodNotAllowedHandler().Handler(ctx)
 	} else {
-		mx.NotFoundHandler().ServeFastHTTP(ctx)
+		mx.NotFoundHandler().Handler(ctx)
 	}
 }
 
@@ -447,7 +447,7 @@ func (mx *Mux) ServeFiles(path string, rootPath string) {
 		GenerateIndexPages: false,
 		AcceptByteRange:    true,
 		Compress:           true,
-		CacheDuration: 90*time.Second,
+		CacheDuration:      90 * time.Second,
 	}
 	if stripSlashes > 0 {
 		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)

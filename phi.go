@@ -16,7 +16,7 @@
 //  func main() {
 //    r := phi.NewRouter()
 //
-//    reqIDMW := func(next phi.HandlerFunc) phi.HandlerFunc {
+//    reqIDMW := func(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //      return func(ctx *fasthttp.RequestCtx) {
 //        next(ctx)
 //        ctx.WriteString("+reqid=1")
@@ -38,7 +38,7 @@
 //
 //    // tasks
 //    r.Group(func(r phi.Router) {
-//      mw := func(next phi.HandlerFunc) phi.HandlerFunc {
+//      mw := func(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //        return func(ctx *fasthttp.RequestCtx) {
 //          next(ctx)
 //          ctx.WriteString("+task")
@@ -53,7 +53,7 @@
 //        ctx.WriteString("new task")
 //      })
 //
-//      caution := func(next phi.HandlerFunc) phi.HandlerFunc {
+//      caution := func(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //        return func(ctx *fasthttp.RequestCtx) {
 //          next(ctx)
 //          ctx.WriteString("+caution")
@@ -70,7 +70,7 @@
 //        ctx.WriteString("no such cat")
 //        ctx.SetStatusCode(404)
 //      })
-//      r.Use(func(next phi.HandlerFunc) phi.HandlerFunc {
+//      r.Use(func(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //        return func(ctx *fasthttp.RequestCtx) {
 //          next(ctx)
 //          ctx.WriteString("+cat")
@@ -90,7 +90,7 @@
 //      ctx.WriteString("no such user")
 //      ctx.SetStatusCode(404)
 //    })
-//    userRouter.Use(func(next phi.HandlerFunc) phi.HandlerFunc {
+//    userRouter.Use(func(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //      return func(ctx *fasthttp.RequestCtx) {
 //        next(ctx)
 //        ctx.WriteString("+user")
@@ -105,7 +105,7 @@
 //    r.Mount("/user", userRouter)
 //
 //    server := &fasthttp.Server{
-//      Handler:     r.ServeFastHTTP,
+//      HandlerFunc:     r.Handler,
 //      ReadTimeout: 10 * time.Second,
 //    }
 //
@@ -120,27 +120,27 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// Handler represents a fasthttp request handler,
-// it has one method: ServeFastHTTP, which is equal to fasthttp.RequestHandler
-type Handler interface {
-	ServeFastHTTP(ctx *fasthttp.RequestCtx)
+// HandlerFunc represents a fasthttp request handler,
+// it has one method: Handler, which is equal to fasthttp.RequestHandler
+type HandlerFunc interface {
+	Handler(ctx *fasthttp.RequestCtx)
 }
 
-// HandlerFunc type is an adapter to allow the use of
+// RequestHandlerFunc type is an adapter to allow the use of
 // ordinary functions as handlers.
-type HandlerFunc func(ctx *fasthttp.RequestCtx)
+type RequestHandlerFunc func(ctx *fasthttp.RequestCtx)
 
-// ServeFastHTTP calss fn(ctx)
-func (fn HandlerFunc) ServeFastHTTP(ctx *fasthttp.RequestCtx) {
+// Handler calss fn(ctx)
+func (fn RequestHandlerFunc) Handler(ctx *fasthttp.RequestCtx) {
 	fn(ctx)
 }
 
-// Middleware represents phi middlewares, which accept a HandlerFunc and return a HandlerFunc
-type Middleware func(HandlerFunc) HandlerFunc
+// Middleware represents phi middlewares, which accept a RequestHandlerFunc and return a RequestHandlerFunc
+type Middleware func(RequestHandlerFunc) RequestHandlerFunc
 
 // Middlewares type is a slice of standard middleware handlers with methods
-// to compose middleware chains and phi.Handler's.
-// type Middlewares []func(Handler) Handler
+// to compose middleware chains and phi.HandlerFunc's.
+// type Middlewares []func(HandlerFunc) HandlerFunc
 type Middlewares []Middleware
 
 // NewRouter returns a new Mux object that implements the Router interface.
@@ -150,7 +150,7 @@ func NewRouter() *Mux {
 
 // Router consisting of the core routing methods used by phi's Mux,
 type Router interface {
-	Handler
+	HandlerFunc
 	Routes
 
 	// Use appends one of more middlewares onto the Router stack.
@@ -166,35 +166,35 @@ type Router interface {
 	// Route mounts a sub-Router along a `pattern`` string.
 	Route(pattern string, fn func(r Router))
 
-	// Mount attaches another phi.Handler along ./pattern/*
-	Mount(pattern string, h Handler)
+	// Mount attaches another phi.HandlerFunc along ./pattern/*
+	Mount(pattern string, h HandlerFunc)
 
 	// Handle and HandleFunc adds routes for `pattern` that matches
 	// all HTTP methods.
-	Handle(pattern string, h HandlerFunc)
+	Handle(pattern string, h RequestHandlerFunc)
 
 	// Method and MethodFunc adds routes for `pattern` that matches
 	// the `method` HTTP method.
-	Method(method, pattern string, h HandlerFunc)
+	Method(method, pattern string, h RequestHandlerFunc)
 
 	// HTTP-method routing along `pattern`
-	Connect(pattern string, h HandlerFunc)
-	Delete(pattern string, h HandlerFunc)
-	Get(pattern string, h HandlerFunc)
-	Head(pattern string, h HandlerFunc)
-	Options(pattern string, h HandlerFunc)
-	Patch(pattern string, h HandlerFunc)
-	Post(pattern string, h HandlerFunc)
-	Put(pattern string, h HandlerFunc)
-	Trace(pattern string, h HandlerFunc)
+	Connect(pattern string, h RequestHandlerFunc)
+	Delete(pattern string, h RequestHandlerFunc)
+	Get(pattern string, h RequestHandlerFunc)
+	Head(pattern string, h RequestHandlerFunc)
+	Options(pattern string, h RequestHandlerFunc)
+	Patch(pattern string, h RequestHandlerFunc)
+	Post(pattern string, h RequestHandlerFunc)
+	Put(pattern string, h RequestHandlerFunc)
+	Trace(pattern string, h RequestHandlerFunc)
 
 	// NotFound defines a handler to respond whenever a route could
 	// not be found.
-	NotFound(h HandlerFunc)
+	NotFound(h RequestHandlerFunc)
 
 	// MethodNotAllowed defines a handler to respond whenever a method is
 	// not allowed.
-	MethodNotAllowed(h HandlerFunc)
+	MethodNotAllowed(h RequestHandlerFunc)
 }
 
 // Routes interface adds two methods for router traversal, which is also

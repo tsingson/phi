@@ -79,10 +79,10 @@ func TestTree(t *testing.T) {
 	tr.InsertRoute(mGET, "/hubs/{hubID}/users", hHubView3)
 
 	tests := []struct {
-		r string   // input request path
-		h Handler  // output matched handler
-		k []string // output param keys
-		v []string // output param values
+		r string      // input request path
+		h HandlerFunc // output matched handler
+		k []string    // output param keys
+		v []string    // output param values
 	}{
 		{r: "/", h: hIndex, k: []string{}, v: []string{}},
 		{r: "/favicon.ico", h: hFavicon, k: []string{}, v: []string{}},
@@ -132,7 +132,7 @@ func TestTree(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, mGET, tt.r)
 
-		var handler Handler
+		var handler HandlerFunc
 		if methodHandler, ok := handlers[mGET]; ok {
 			handler = methodHandler.handler
 		}
@@ -203,11 +203,11 @@ func TestTreeMoar(t *testing.T) {
 	tr.InsertRoute(mGET, "/users/{id}/settings/*", hStub16)
 
 	tests := []struct {
-		m methodTyp // input request http method
-		r string    // input request path
-		h Handler   // output matched handler
-		k []string  // output param keys
-		v []string  // output param values
+		m methodTyp   // input request http method
+		r string      // input request path
+		h HandlerFunc // output matched handler
+		k []string    // output param keys
+		v []string    // output param values
 	}{
 		{m: mGET, r: "/articles/search", h: hStub1, k: []string{}, v: []string{}},
 		{m: mGET, r: "/articlefun", h: hStub5, k: []string{}, v: []string{}},
@@ -248,7 +248,7 @@ func TestTreeMoar(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, tt.m, tt.r)
 
-		var handler Handler
+		var handler HandlerFunc
 		if methodHandler, ok := handlers[tt.m]; ok {
 			handler = methodHandler.handler
 		}
@@ -293,10 +293,10 @@ func TestTreeRegexp(t *testing.T) {
 	// log.Println("~~~~~~~~~")
 
 	tests := []struct {
-		r string   // input request path
-		h Handler  // output matched handler
-		k []string // output param keys
-		v []string // output param values
+		r string      // input request path
+		h HandlerFunc // output matched handler
+		k []string    // output param keys
+		v []string    // output param values
 	}{
 		{r: "/articles", h: nil, k: []string{}, v: []string{}},
 		{r: "/articles/12345", h: hStub7, k: []string{"rid"}, v: []string{"12345"}},
@@ -314,7 +314,7 @@ func TestTreeRegexp(t *testing.T) {
 
 		_, handlers, _ := tr.FindRoute(rctx, mGET, tt.r)
 
-		var handler Handler
+		var handler HandlerFunc
 		if methodHandler, ok := handlers[mGET]; ok {
 			handler = methodHandler.handler
 		}
@@ -343,7 +343,7 @@ func TestTreeRegexMatchWholeParam(t *testing.T) {
 
 	tests := []struct {
 		url             string
-		expectedHandler Handler
+		expectedHandler HandlerFunc
 	}{
 		{url: "/13", expectedHandler: hStub1},
 		{url: "/a13", expectedHandler: nil},
@@ -459,7 +459,7 @@ func TestWalker(t *testing.T) {
 	r := bigMux()
 
 	// Walk the muxBig router tree.
-	if err := Walk(r, func(method string, route string, handler Handler, middlewares ...Middleware) error {
+	if err := Walk(r, func(method string, route string, handler HandlerFunc, middlewares ...Middleware) error {
 		t.Logf("%v %v", method, route)
 
 		return nil
@@ -468,6 +468,6 @@ func TestWalker(t *testing.T) {
 	}
 }
 
-func newStub() HandlerFunc {
-	return HandlerFunc(func(ctx *fasthttp.RequestCtx) {})
+func newStub() RequestHandlerFunc {
+	return RequestHandlerFunc(func(ctx *fasthttp.RequestCtx) {})
 }

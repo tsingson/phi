@@ -83,7 +83,7 @@ func (x *Context) URLParam(key string) string {
 //
 // For example,
 //
-// func Instrument(next phi.HandlerFunc) phi.HandlerFunc {
+// func Instrument(next phi.RequestHandlerFunc) phi.RequestHandlerFunc {
 //   return func(ctx *fasthttp.RequestCtx) {
 //     next(ctx)
 //     routePattern := phi.RouteContext(ctx).RoutePattern()

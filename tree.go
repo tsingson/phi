@@ -104,7 +104,7 @@ type endpoints map[methodTyp]*endpoint
 
 type endpoint struct {
 	// endpoint handler
-	handler Handler
+	handler HandlerFunc
 
 	// pattern is the routing pattern for handler nodes
 	pattern string
@@ -122,7 +122,7 @@ func (s endpoints) Value(method methodTyp) *endpoint {
 	return mh
 }
 
-func (n *node) InsertRoute(method methodTyp, pattern string, handler Handler) *node {
+func (n *node) InsertRoute(method methodTyp, pattern string, handler HandlerFunc) *node {
 	var parent *node
 	search := pattern
 
@@ -327,7 +327,7 @@ func (n *node) getEdge(ntyp nodeTyp, label, tail byte, prefix string) *node {
 	return nil
 }
 
-func (n *node) setEndpoint(method methodTyp, handler Handler, pattern string) {
+func (n *node) setEndpoint(method methodTyp, handler HandlerFunc, pattern string) {
 	// Set the handler for the method type on the node
 	if n.endpoints == nil {
 		n.endpoints = make(endpoints)
@@ -357,7 +357,7 @@ func (n *node) setEndpoint(method methodTyp, handler Handler, pattern string) {
 	}
 }
 
-func (n *node) FindRoute(rctx *Context, method methodTyp, path string) (*node, endpoints, Handler) {
+func (n *node) FindRoute(rctx *Context, method methodTyp, path string) (*node, endpoints, HandlerFunc) {
 	// Reset the context routing pattern and params
 	rctx.routePattern = ""
 	rctx.routeParams.Keys = rctx.routeParams.Keys[:0]
@@ -589,7 +589,7 @@ func (n *node) routes() []Route {
 		}
 
 		for p, mh := range pats {
-			hs := make(map[string]Handler)
+			hs := make(map[string]HandlerFunc)
 			if mh[mALL] != nil && mh[mALL].handler != nil {
 				hs["*"] = mh[mALL].handler
 			}
@@ -788,12 +788,12 @@ func (ns nodes) findEdge(label byte) *node {
 // Route describes the details of a routing handler.
 type Route struct {
 	Pattern   string
-	Handlers  map[string]Handler
+	Handlers  map[string]HandlerFunc
 	SubRoutes Routes
 }
 
 // WalkFunc is the type of the function called for each method and route visited by Walk.
-type WalkFunc func(method string, route string, handler Handler, middlewares ...Middleware) error
+type WalkFunc func(method string, route string, handler HandlerFunc, middlewares ...Middleware) error
 
 // Walk walks any router tree that implements Routes interface.
 func Walk(r Routes, walkFn WalkFunc) error {

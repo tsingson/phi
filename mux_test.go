@@ -70,13 +70,13 @@ func TestMuxURLParams(t *testing.T) {
 
 func TestMuxUse(t *testing.T) {
 	r := NewRouter()
-	r.Use(func(next HandlerFunc) HandlerFunc {
+	r.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+mw1")
 		}
 	})
-	r.Use(func(next HandlerFunc) HandlerFunc {
+	r.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+mw2")
@@ -97,7 +97,7 @@ func TestMuxWith(t *testing.T) {
 		ctx.WriteString("ok")
 	}
 	r.Get("/", h)
-	mw := func(next HandlerFunc) HandlerFunc {
+	mw := func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+with")
@@ -116,7 +116,7 @@ func TestMuxGroup(t *testing.T) {
 		ctx.WriteString("index")
 	})
 	r.Group(func(r Router) {
-		r.Use(func(next HandlerFunc) HandlerFunc {
+		r.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 			return func(ctx *fasthttp.RequestCtx) {
 				next(ctx)
 				ctx.WriteString("+group")
@@ -142,7 +142,7 @@ func TestMuxRoute(t *testing.T) {
 		ctx.WriteString("index")
 	})
 	r.Route("/admin", func(r Router) {
-		r.Use(func(next HandlerFunc) HandlerFunc {
+		r.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 			return func(ctx *fasthttp.RequestCtx) {
 				next(ctx)
 				ctx.WriteString("+route")
@@ -168,7 +168,7 @@ func TestMuxMount(t *testing.T) {
 	})
 
 	sub := NewRouter()
-	sub.Use(func(next HandlerFunc) HandlerFunc {
+	sub.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+mount")
@@ -314,7 +314,7 @@ func TestMuxBigMux(t *testing.T) {
 func bigMux() Router {
 	r := NewRouter()
 
-	reqIDMW := func(next HandlerFunc) HandlerFunc {
+	reqIDMW := func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+reqid=1")
@@ -336,7 +336,7 @@ func bigMux() Router {
 
 	// tasks
 	r.Group(func(r Router) {
-		mw := func(next HandlerFunc) HandlerFunc {
+		mw := func(next RequestHandlerFunc) RequestHandlerFunc {
 			return func(ctx *fasthttp.RequestCtx) {
 				next(ctx)
 				ctx.WriteString("+task")
@@ -351,7 +351,7 @@ func bigMux() Router {
 			ctx.WriteString("new task")
 		})
 
-		caution := func(next HandlerFunc) HandlerFunc {
+		caution := func(next RequestHandlerFunc) RequestHandlerFunc {
 			return func(ctx *fasthttp.RequestCtx) {
 				next(ctx)
 				ctx.WriteString("+caution")
@@ -368,7 +368,7 @@ func bigMux() Router {
 			ctx.WriteString("no such cat")
 			ctx.SetStatusCode(404)
 		})
-		r.Use(func(next HandlerFunc) HandlerFunc {
+		r.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 			return func(ctx *fasthttp.RequestCtx) {
 				next(ctx)
 				ctx.WriteString("+cat")
@@ -388,7 +388,7 @@ func bigMux() Router {
 		ctx.WriteString("no such user")
 		ctx.SetStatusCode(404)
 	})
-	userRouter.Use(func(next HandlerFunc) HandlerFunc {
+	userRouter.Use(func(next RequestHandlerFunc) RequestHandlerFunc {
 		return func(ctx *fasthttp.RequestCtx) {
 			next(ctx)
 			ctx.WriteString("+user")
@@ -405,11 +405,11 @@ func bigMux() Router {
 	return r
 }
 
-func newFastHTTPTester(t *testing.T, h Handler) *httpexpect.Expect {
+func newFastHTTPTester(t *testing.T, h HandlerFunc) *httpexpect.Expect {
 	return httpexpect.WithConfig(httpexpect.Config{
 		// Pass requests directly to FastHTTPHandler.
 		Client: &http.Client{
-			Transport: httpexpect.NewFastBinder(fasthttp.RequestHandler(h.ServeFastHTTP)),
+			Transport: httpexpect.NewFastBinder(fasthttp.RequestHandler(h.Handler)),
 			Jar:       httpexpect.NewJar(),
 		},
 		// Report errors using testify.
