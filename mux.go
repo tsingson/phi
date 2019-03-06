@@ -55,6 +55,17 @@ func NewMux() *Mux {
 	return mux
 }
 
+// NewMux returns a newly initialized Mux object that implements the Router
+// interface.
+func New() *Mux {
+	mux := &Mux{tree: &node{}}
+	mux.pool.New = func() interface{} {
+		return NewRouteContext()
+	}
+	return mux
+}
+
+
 // Handler is the single method of the phi.HandlerFunc interface that makes
 // Mux interoperable with the standard library. It uses a sync.Pool to get and
 // reuse routing contexts for each request.
