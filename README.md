@@ -4,6 +4,12 @@
 
 `phi` is a package which ports [chi](https://github.com/go-chi/chi) to fasthttp.
 
+## fork
+fork from [fate-lovely/phi](https://github.com/fate-lovely/phi) that [fate-lovely](https://github.com/fate-lovely) port from [chi](https://github.com/go-chi/chi)
+
+my modify:
+*  rename func and type name , more clean to read
+
 ## Install
 
 `go get -u github.com/fate-lovely/phi`
