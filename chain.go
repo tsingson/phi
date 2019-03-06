@@ -9,13 +9,13 @@ func Chain(middlewares ...Middleware) Middlewares {
 	return Middlewares(middlewares)
 }
 
-// HandlerFunc builds and returns a phi.HandlerFunc from the chain of middlewares,
+// Handler builds and returns a phi.HandlerFunc from the chain of middlewares,
 // with `h phi.RequestHandlerFunc` as the final handler.
 func (mws Middlewares) Handler(h HandlerFunc) HandlerFunc {
 	return &ChainHandler{mws, h, chain(mws, h)}
 }
 
-// RequestHandlerFunc builds and returns a phi.HandlerFunc from the chain of middlewares,
+// HandlerFunc builds and returns a phi.HandlerFunc from the chain of middlewares,
 // with `h phi.RequestHandlerFunc` as the final handler.
 func (mws Middlewares) HandlerFunc(h RequestHandlerFunc) HandlerFunc {
 	return &ChainHandler{mws, h, chain(mws, h)}
@@ -29,6 +29,7 @@ type ChainHandler struct {
 	chain       HandlerFunc
 }
 
+// Handler return all router as fasthttp.RequestHandler´
 func (c *ChainHandler) Handler(ctx *fasthttp.RequestCtx) { // nolint
 	c.chain.Handler(ctx)
 }

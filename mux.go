@@ -55,7 +55,7 @@ func NewMux() *Mux {
 	return mux
 }
 
-// NewMux returns a newly initialized Mux object that implements the Router
+// New returns a newly initialized Mux object that implements the Router
 // interface.
 func New() *Mux {
 	mux := &Mux{tree: &node{}}
@@ -64,7 +64,6 @@ func New() *Mux {
 	}
 	return mux
 }
-
 
 // Handler is the single method of the phi.HandlerFunc interface that makes
 // Mux interoperable with the standard library. It uses a sync.Pool to get and
@@ -444,6 +443,7 @@ func (mx *Mux) updateSubRoutes(fn func(subMux *Mux)) {
 	}
 }
 
+// ServeFiles  provide fasthttp static file service
 func (mx *Mux) ServeFiles(path string, rootPath string) {
 	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
 		panic("path must end with /*filepath in path '" + path + "'")
