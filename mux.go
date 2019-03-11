@@ -356,6 +356,35 @@ func (mx *Mux) MethodNotAllowedHandler() RequestHandlerFunc {
 	return methodNotAllowedHandler
 }
 
+// ServeFiles  provide fasthttp static file service
+func (mx *Mux) ServeFiles(path string, rootPath string) {
+	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
+		panic("path must end with /*filepath in path '" + path + "'")
+	}
+	prefix := path[:len(path)-10]
+
+	stripSlashes := strings.Count(prefix, "/")
+
+	fs := &fasthttp.FS{
+		Root:               rootPath,
+		IndexNames:         []string{"index.html"},
+		GenerateIndexPages: false,
+		AcceptByteRange:    true,
+		Compress:           true,
+		CacheDuration:      90 * time.Second,
+	}
+	if stripSlashes > 0 {
+		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
+	}
+
+	fh := fs.NewRequestHandler() // fasthttp.FSHandler(rootPath, strings.Count(prefix, "/"))
+
+	mx.Get(path, func(ctx *fasthttp.RequestCtx) {
+		fh(ctx)
+	})
+	return
+}
+
 // buildRouteHandler builds the single mux handler that is a chain of the middleware
 // stack, as defined by calls to Use(), and the tree router (Mux) itself. After this
 // point, no other middlewares can be registered on this Mux's stack. But you can still
@@ -441,35 +470,6 @@ func (mx *Mux) updateSubRoutes(fn func(subMux *Mux)) {
 		}
 		fn(subMux)
 	}
-}
-
-// ServeFiles  provide fasthttp static file service
-func (mx *Mux) ServeFiles(path string, rootPath string) {
-	if len(path) < 10 || path[len(path)-10:] != "/*filepath" {
-		panic("path must end with /*filepath in path '" + path + "'")
-	}
-	prefix := path[:len(path)-10]
-
-	stripSlashes := strings.Count(prefix, "/")
-
-	fs := &fasthttp.FS{
-		Root:               rootPath,
-		IndexNames:         []string{"index.html"},
-		GenerateIndexPages: false,
-		AcceptByteRange:    true,
-		Compress:           true,
-		CacheDuration:      90 * time.Second,
-	}
-	if stripSlashes > 0 {
-		fs.PathRewrite = fasthttp.NewPathSlashesStripper(stripSlashes)
-	}
-
-	fh := fs.NewRequestHandler() // fasthttp.FSHandler(rootPath, strings.Count(prefix, "/"))
-
-	mx.Get(path, func(ctx *fasthttp.RequestCtx) {
-		fh(ctx)
-	})
-	return
 }
 
 func notFound(ctx *fasthttp.RequestCtx) {
